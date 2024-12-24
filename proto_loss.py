@@ -8,29 +8,34 @@ class PrototypicalLoss(Module):
     '''
     Loss class deriving from Module for the prototypical loss function defined below
     '''
-    def __init__(self, Ns):
+    def __init__(self, n_support):
         super(PrototypicalLoss, self).__init__()
-        self.Ns = Ns
+        self.n_support = n_support
 
     def forward(self, input, target):
-        return prototypical_loss(input, target, self.Ns)
+        return prototypical_loss(input, target, self.n_support)
 
 
 def euclidean_dist(x, y):
     '''
-    Compute euclidean distance between two tensors
+    Compute euclidean distance between each pair of query and prototype
+    x: (n_query * n_classes, feature_size)
+    y: (n_classes, feature_size)
     '''
-    # x: 2 x 2048
-    # y: 2 x 2048
+    # Expand x and y to have the same shape for broadcasting
+    x = x.unsqueeze(1)  # (n_query * n_classes, 1, feature_size)
+    y = y.unsqueeze(0)  # (1, n_classes, feature_size)
+    
+    # Compute the squared Euclidean distance
+    dists = torch.pow(x - y, 2).sum(dim=2)  # (n_query * n_classes, n_classes)
+    return dists.sqrt()
 
-    return torch.pow(x - y, 2).sum().sqrt()
 
-
-def prototypical_loss(input, target, Ns):
+def prototypical_loss(input, target, n_support):
     '''
-    Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
+    In_supportpired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
-    Compute the barycentres by averaging the features of Ns
+    Compute the barycentres by averaging the features of n_support
     samples for each class in target, computes then the distances from each
     samples' features to each one of the barycentres, computes the
     log_probability for each n_query samples for each one of the current
@@ -39,30 +44,37 @@ def prototypical_loss(input, target, Ns):
     Args:
     - input: the model output for a batch of samples
     - target: ground truth for the above batch of samples
-    - Ns: number of samples to keep in account when computing
+    - n_support: number of samples to keep in account when computing
       barycentres, for each one of the current classes
     '''
     target_cpu = target.to('cpu')
     input_cpu = input.to('cpu')
 
     def supp_idxs(c):
-        # FIXME when torch will support where as np
-        return target_cpu.eq(c).nonzero()[:Ns].squeeze(1)
+        '''
+        select the n_support first elem in target_cpu that are equal to c
+        input: integer 
+        output: torch.tensor of size torch.Size([5])
+        '''
+        # s
+        return target_cpu.eq(c).nonzero()[:n_support].squeeze(1)
 
-    # FIXME when torch.unique will be available on cuda too
+    # get the classes labels
     classes = torch.unique(target_cpu)
+    # get the number of classes
     n_classes = len(classes)
-    # FIXME when torch will support where as np
-    # assuming n_query, n_target constants
-    n_query = target_cpu.eq(classes[0].item()).sum().item() - Ns
+
+    n_query = target_cpu.eq(classes[0].item()).sum().item() - n_support
 
     support_idxs = list(map(supp_idxs, classes))
 
+    # get the prototypes : torch.Size([6, 8192]) (because there are 6 classes)
     prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
-    # FIXME when torch will support where as np
-    query_idxs = torch.stack(list(map(lambda c: target_cpu.eq(c).nonzero()[Ns:], classes))).view(-1)
 
-    query_samples = input.to('cpu')[query_idxs]
+    query_idxs = torch.stack(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:], classes))).view(-1)
+
+    query_samples = input_cpu[query_idxs]
+
     dists = euclidean_dist(query_samples, prototypes)
 
     log_p_y = F.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)

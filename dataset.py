@@ -13,7 +13,7 @@ class TrainDataset(torch.utils.data.Dataset):
         - target_transform: how to transform the target
         - download: need to download the dataset
         '''
-        super(DataLoader, self).__init__()
+        super(TrainDataset, self).__init__()
 
         # Chargement des données HDF5
         with h5py.File(train_data_path, 'r') as data:

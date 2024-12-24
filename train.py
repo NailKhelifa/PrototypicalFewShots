@@ -124,8 +124,7 @@ def main(opt):
     )
 
     # Training
-    res = train(opt, tr_dataloader, model, optim, lr_scheduler)
-    best_state, best_acc, train_loss, train_acc, val_loss, val_acc = res
+    best_state, best_acc, train_loss, train_acc, val_loss, val_acc = train(opt, tr_dataloader, model, optim, lr_scheduler)
     model.load_state_dict(best_state)
 
     # Testing (if needed)

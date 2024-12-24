@@ -19,6 +19,7 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     train_loss, train_acc, val_loss, val_acc = [], [], [], []
     best_acc = 0
+    best_state = model.state_dict()  # Initialize with the current state of the model
 
     best_model_path = os.path.join(opt['experiment_root'], 'best_model.pth')
     last_model_path = os.path.join(opt['experiment_root'], 'last_model.pth')
@@ -72,7 +73,7 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
     """
     Test the model trained with the prototypical learning algorithm
     """
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = opt["device"]
     avg_acc = []
     for epoch in range(10):
         test_iter = iter(test_dataloader)

@@ -14,15 +14,18 @@ def save_list_to_file(path, thelist):
 
 def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
     """
-    Train the model with the prototypical learning algorithm
+    Train the model with the prototypical learning algorithm.
+    Save the best and final models during training in the current working directory.
     """
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     train_loss, train_acc, val_loss, val_acc = [], [], [], []
     best_acc = 0
     best_state = model.state_dict()  # Initialize with the current state of the model
 
-    best_model_path = os.path.join(opt['experiment_root'], 'best_model.pth')
-    last_model_path = os.path.join(opt['experiment_root'], 'last_model.pth')
+    # Paths to save models in the current working directory
+    cwd = os.getcwd()
+    best_model_path = os.path.join(cwd, 'best_model.pth')
+    last_model_path = os.path.join(cwd, 'last_model.pth')
 
     for epoch in range(opt['epochs']):
         print('=== Epoch: {} ==='.format(epoch))
@@ -42,8 +45,10 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
         avg_acc = np.mean(train_acc[-opt['iterations']:])
         print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
         lr_scheduler.step()
+
         if val_dataloader is None:
             continue
+
         val_iter = iter(val_dataloader)
         model.eval()
         for batch in val_iter:
@@ -57,41 +62,26 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
         avg_acc = np.mean(val_acc[-opt['iterations']:])
         postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(best_acc)
         print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(avg_loss, avg_acc, postfix))
+
+        # Save the best model
         if avg_acc >= best_acc:
             torch.save(model.state_dict(), best_model_path)
+            print(f"Best model saved to {best_model_path}")
             best_acc = avg_acc
             best_state = model.state_dict()
 
+    # Save the final model
     torch.save(model.state_dict(), last_model_path)
+    print(f"Final model saved to {last_model_path}")
 
+    # Save training and validation metrics
     for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
-        save_list_to_file(os.path.join(opt['experiment_root'], name + '.txt'), locals()[name])
+        save_list_to_file(os.path.join(cwd, name + '.txt'), locals()[name])
 
     return best_state, best_acc, train_loss, train_acc, val_loss, val_acc
 
-'''def test(opt, test_dataloader, model):
-    """
-    Test the model trained with the prototypical learning algorithm
-    """
-    device = opt["device"]
-    avg_acc = []
-    for epoch in range(10):
-        test_iter = iter(test_dataloader)
-        for batch in test_iter:
-            x, y = batch
-            x, y = x.to(device), y.to(device)
-            model_output = model(x)
-            _, acc = loss_fn(model_output, target=y, n_support=opt['num_support_val'])
-            avg_acc.append(acc.item())
-    avg_acc = np.mean(avg_acc)
-    print('Test Acc: {}'.format(avg_acc))
-
-    return avg_acc'''
 
 def main(opt):
-    if not os.path.exists(opt['experiment_root']):
-        os.makedirs(opt['experiment_root'])
-
     # Seed initialization
     torch.cuda.cudnn_enabled = False
     np.random.seed(opt['manual_seed'])
@@ -128,6 +118,4 @@ def main(opt):
     best_state, best_acc, train_loss, train_acc, val_loss, val_acc = train(opt, tr_dataloader, model, optim, lr_scheduler)
     model.load_state_dict(best_state)
 
-    # Testing (if needed)
-    # test_dataloader = ...  # Initialize test dataloader as needed
-    # test(opt, test_dataloader, model)
+    return model

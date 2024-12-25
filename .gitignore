@@ -4,3 +4,8 @@ __pycache__/proto_loss.cpython-39.pyc
 __pycache__/proto_encoder.cpython-39.pyc
 __pycache__/proto_batch_sampler.cpython-39.pyc
 __pycache__/dataset.cpython-39.pyc
+__pycache__/dataset.cpython-312.pyc
+__pycache__/proto_batch_sampler.cpython-312.pyc
+__pycache__/proto_encoder.cpython-312.pyc
+__pycache__/proto_loss.cpython-312.pyc
+__pycache__/train.cpython-312.pyc

@@ -81,10 +81,11 @@ def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="eucli
 
     return accuracy
 
-def load_data(type="enroll"):
-    if type=="enroll":
+
+def load_data(task="enroll"):
+    if task == "enroll":
         data_dir = os.path.join(os.getcwd(), 'enroll.hdf5')
-    elif type=="test":
+    elif task == "test":
         data_dir = os.path.join(os.getcwd(), 'test_fewshot.hdf5')
     # Chargement des données HDF5
     with h5py.File(data_dir, 'r') as data:

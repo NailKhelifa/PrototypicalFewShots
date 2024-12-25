@@ -8,10 +8,7 @@ class TrainDataset(torch.utils.data.Dataset):
         '''
         The items are (filename,category). The index of all the categories can be found in self.idx_classes
         Args:
-        - root: the directory where the dataset will be stored
-        - transform: how to transform the input
-        - target_transform: how to transform the target
-        - download: need to download the dataset
+        - train_data_path: directory where the dataset is stored
         '''
         super(TrainDataset, self).__init__()
 

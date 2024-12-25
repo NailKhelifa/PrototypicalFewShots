@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+import h5py
+import os
 
 def compute_prototypes(encoder, x_enroll, y_enroll):
     """
@@ -78,3 +80,18 @@ def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="eucli
     accuracy = (predicted_labels == y_test).float().mean().item()
 
     return accuracy
+
+def load_data(type="enroll"):
+    if type=="enroll":
+        data_dir = os.path.join(os.getcwd(), 'enroll.hdf5')
+    elif type=="test":
+        data_dir = os.path.join(os.getcwd(), 'test_fewshot.hdf5')
+    # Chargement des données HDF5
+    with h5py.File(data_dir, 'r') as data:
+        x = torch.tensor(data['signaux'][:])  # Convertir les signaux en tenseur PyTorch
+        # Forme [N_samples, 2048, 2] que l'on réorganise en [N_samples, 2, 2048] : (batch, canal, résolution_temporelle)
+        x = x.permute(0, 2, 1)  
+        snr = torch.tensor(data['snr'][:])    
+        y = torch.tensor(data['labels'][:])  # Convertir les labels en tenseur PyTorch
+
+    return x, y, snr

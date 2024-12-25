@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from proto_encoder import PrototypeEncoder
 import h5py
 import os
 
@@ -96,3 +97,31 @@ def load_data(task="enroll"):
         y = torch.tensor(data['labels'][:])  # Convertir les labels en tenseur PyTorch
 
     return x, y, snr
+
+def test_acc(model_path, enrollment_sampling=500):
+    '''
+    model_path : répertoire auquel est sauvegardé le modèle à tester
+    enrollment_sampling : nombre d'échantillons à considérer pour enroller les nouvelles classes
+    '''
+    model = PrototypeEncoder()
+
+    state_dict_path_20 = model_path  # Path to the saved state_dict file
+
+    state_dict_20 = torch.load(state_dict_path_20, map_location=torch.device('cpu'))
+    model.load_state_dict(state_dict_20)
+    # Set the model to evaluation mode (if needed)
+    model.eval()
+
+    x_enroll, y_enroll, _ = load_data(task="enroll")
+    
+    # on ne retient que les enrollment_sampling-premières données pour enroller les classes
+    sampled_x_enroll, sampled_y_enroll = x_enroll[:enrollment_sampling], y_enroll[:enrollment_sampling]
+    x_test, y_test, _ = load_data(task="test")
+
+    # compute the prototypes
+    prototypes = compute_prototypes(model, sampled_x_enroll, sampled_y_enroll)
+
+    # compute the accuracies on the test
+    accuracy = compute_accuracy(model, prototypes, x_test, y_test)
+
+    return accuracy

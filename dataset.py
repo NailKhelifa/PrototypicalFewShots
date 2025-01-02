@@ -5,7 +5,7 @@ import h5py
 from torch.utils.data import Dataset
 
 class SignalNShotTrainDataset(Dataset):
-    def __init__(self, train_data_path, batch_size=100, classes_per_set=10, samples_per_class=1, normalize=False):
+    def __init__(self, train_data_path, batch_size=100, classes_per_set=10, samples_per_class=1, matching=False):
         """
         Dataset combinant les fonctionnalités de TrainDataset et OmniglotNShotDataset.
         Args:
@@ -33,12 +33,11 @@ class SignalNShotTrainDataset(Dataset):
         self.samples_per_class = samples_per_class
 
         self.n_classes = len(torch.unique(self.y_train))
-        if normalize:
+        if matching:
             self.normalization()
-
-        # Organisation des datasets (pour compatibilité avec N-shot learning)
-        self.indexes = {"train": 0}
-        self.datasets_cache = {"train": self.load_data_cache()}  # Cache des batchs
+            # Organisation des datasets (pour compatibilité avec N-shot learning)
+            self.indexes = {"train": 0}
+            self.datasets_cache = {"train": self.load_data_cache()}  # Cache des batchs
 
     def normalization(self):
         """

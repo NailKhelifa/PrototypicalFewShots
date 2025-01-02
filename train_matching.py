@@ -110,12 +110,10 @@ def main_matching(opt):
 
     total_train_batches = opt['total_train_batches']
     model = MatchingNetwork(batch_size=opt['batch_size'],
-                            keep_prob=torch.FloatTensor(1), 
                             num_channels=opt['channels'],
                             fce=opt['fce'],
                             num_classes_per_set=opt['classes_per_set'],
-                            num_samples_per_class=opt['samples_per_class'],
-                            nClasses = 0, image_size = 28)
+                            num_samples_per_class=opt['samples_per_class'])
 
     # Dataset and DataLoader
     data = SignalNShotTrainDataset(opt['train_dataset_path'],

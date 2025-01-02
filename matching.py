@@ -122,7 +122,7 @@ class AttentionalClassify(nn.Module):
 
 
 class MatchingNetwork(nn.Module):
-    def __init__(self, keep_prob, batch_size=100, num_channels=2, fce=False, num_classes_per_set=5, 
+    def __init__(self, batch_size=100, num_channels=2, fce=False, num_classes_per_set=5, 
                  num_samples_per_class=1, layer_size=64, signal_length=2048):
         super(MatchingNetwork, self).__init__()
         """

@@ -98,10 +98,10 @@ def load_data(task="enroll"):
 
     return x, y, snr
 
-def test_acc(model_path, enrollment_sampling=500):
+def test_acc(model_path, n_shot=500):
     '''
     model_path : répertoire auquel est sauvegardé le modèle à tester
-    enrollment_sampling : nombre d'échantillons à considérer pour enroller les nouvelles classes
+    n_shot : nombre d'échantillons à considérer pour enroller les nouvelles classes
     '''
     model = PrototypeEncoder()
 
@@ -114,8 +114,8 @@ def test_acc(model_path, enrollment_sampling=500):
 
     x_enroll, y_enroll, _ = load_data(task="enroll")
     
-    # on ne retient que les enrollment_sampling-premières données pour enroller les classes
-    sampled_x_enroll, sampled_y_enroll = x_enroll[:enrollment_sampling], y_enroll[:enrollment_sampling]
+    # on ne retient que les n_shot-premières données pour enroller les classes
+    sampled_x_enroll, sampled_y_enroll = x_enroll[:n_shot], y_enroll[:n_shot]
     x_test, y_test, _ = load_data(task="test")
 
     # compute the prototypes

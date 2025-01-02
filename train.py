@@ -4,7 +4,7 @@ import torch
 from tqdm import tqdm
 from proto_batch_sampler import PrototypicalBatchSampler
 from proto_loss import prototypical_loss as loss_fn
-from dataset import TrainDataset
+from dataset import SignalNShotTrainDataset
 from proto_encoder import PrototypeEncoder
 
 def save_list_to_file(path, thelist):
@@ -80,7 +80,6 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
 
     return best_state, best_acc, train_loss, train_acc, val_loss, val_acc
 
-
 def main(opt):
     # Seed initialization
     torch.cuda.cudnn_enabled = False
@@ -89,7 +88,7 @@ def main(opt):
     torch.cuda.manual_seed(opt['manual_seed'])
 
     # Dataset and DataLoader
-    dataset = TrainDataset(opt['train_dataset_path'])
+    dataset = SignalNShotTrainDataset(opt['train_dataset_path'])
     n_classes = len(np.unique(dataset.y_train))
     if n_classes < opt['classes_per_it_tr'] or n_classes < opt['classes_per_it_val']:
         raise Exception(
@@ -119,3 +118,4 @@ def main(opt):
     model.load_state_dict(best_state)
 
     return model, best_acc, train_loss, train_acc
+

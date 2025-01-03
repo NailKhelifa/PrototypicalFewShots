@@ -18,23 +18,23 @@ def compute_prototypes(encoder, x_enroll, y_enroll):
     """
     # Activer le mode évaluation (pas d'entraînement, désactive dropout si utilisé)
     encoder.eval()
-    
+
     # Calcul des embeddings pour les signaux d'enrôlement
     with torch.no_grad():  # Pas de calcul des gradients pour gagner en mémoire et en vitesse
         embeddings = encoder(x_enroll)  # Shape: (N, output_dim)
-    
+
     # Trouver les classes uniques
     unique_classes = torch.unique(y_enroll)
-    
+
     # Calculer les prototypes
     prototypes = {}
     for cls in unique_classes:
         # Sélectionner les embeddings appartenant à la classe cls
         class_embeddings = embeddings[y_enroll == cls]  # Shape: (num_samples_in_class, output_dim)
-        
+
         # Calculer le prototype comme la moyenne des embeddings
         prototype = class_embeddings.mean(dim=0)  # Shape: (output_dim,)
-        
+
         # Ajouter le prototype au dictionnaire
         prototypes[cls.item()] = prototype
 
@@ -94,6 +94,8 @@ def load_data(task="enroll", data_dir="../data"):
         data_dir += "/enroll.hdf5"
     elif task == "test":
         data_dir += '/test_fewshot.hdf5'
+    elif task == "train":
+        data_dir += "/train.hdf5"
     # Chargement des données HDF5
     with h5py.File(data_dir, 'r') as data:
         x = torch.tensor(data['signaux'][:])  # Convertir les signaux en tenseur PyTorch
@@ -141,12 +143,13 @@ def test_n_shot(model, n=5, device="cuda:0", return_logs=False, data_dir="../dat
     x_enroll, y_enroll, _ = load_data(task="enroll", data_dir=data_dir)
     x_enroll, y_enroll = x_enroll.to(device), y_enroll.to(device)
     (x_n, y_n), idxs = get_n_per_classes(x_enroll, y_enroll, n=n)
-    mask = torch.ones(x_enroll.size(0), dtype=torch.bool)
-    mask[idxs] = False
-    x_test, y_test = x_enroll[mask], y_enroll[mask]
+
     model.to(device)
     prototype = compute_prototypes(model, x_n, y_n)
 
+    x_test, y_test, _ = load_data(task="test", data_dir=data_dir)
+    x_test, y_test = x_test.to(device), y_test.to(device)
+
     out = compute_accuracy(model, prototype, x_test, y_test, logs=return_logs)
-    
+
     return out

@@ -1,10 +1,10 @@
 import torch
 import torch.backends.cudnn as cudnn
 import tqdm
-from matching import MatchingNetwork
+from .matching import MatchingNetwork
 from torch.autograd import Variable
 import os 
-from dataset import SignalNShotTrainDataset
+from .dataset import SignalNShotTrainDataset
 
 def run_training_epoch(data, opt, device, total_train_batches, optim, model, lr_scheduler):
     """

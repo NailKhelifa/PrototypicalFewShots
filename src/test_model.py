@@ -1,9 +1,11 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from proto_encoder import PrototypeEncoder
+from .proto_encoder import PrototypeEncoder
 import h5py
 import os
+from .utils import get_n_per_classes
+
 
 def compute_prototypes(encoder, x_enroll, y_enroll):
     """
@@ -38,7 +40,8 @@ def compute_prototypes(encoder, x_enroll, y_enroll):
 
     return prototypes
 
-def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="euclidean"):
+def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="euclidean",
+                     logs=False):
     """
     Calcule l'accuracy des prédictions sur un ensemble de test.
 
@@ -50,15 +53,16 @@ def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="eucli
     :return: Accuracy (valeur entre 0 et 1).
     """
     # Activer le mode évaluation
+    device = x_test.device
     encoder.eval()
-    
+    encoder.to(device)
     # Obtenir les embeddings des données de test
     with torch.no_grad():
         test_embeddings = encoder(x_test)  # Shape: (N_test, output_dim)
     
     # Convertir les prototypes en un tenseur pour faciliter les calculs
-    prototype_labels = torch.tensor(list(prototypes.keys()))  # Labels des prototypes
-    prototype_vectors = torch.stack(list(prototypes.values()))  # Shape: (num_classes, output_dim)
+    prototype_labels = torch.tensor(list(prototypes.keys())).to(device)  # Labels des prototypes
+    prototype_vectors = torch.stack(list(prototypes.values())).to(device)  # Shape: (num_classes, output_dim)
     
     # Calculer les distances entre chaque embedding de test et chaque prototype
     if distance_metric == "euclidean":
@@ -76,18 +80,20 @@ def compute_accuracy(encoder, prototypes, x_test, y_test, distance_metric="eucli
     
     # Prédictions : choisir le prototype le plus proche pour chaque point de test
     predicted_labels = prototype_labels[torch.argmin(distances, dim=1)]  # Shape: (N_test,)
-    
-    # Calculer l'accuracy
+
+    if logs:
+        return (predicted_labels, y_test)
+
     accuracy = (predicted_labels == y_test).float().mean().item()
 
     return accuracy
 
 
-def load_data(task="enroll"):
+def load_data(task="enroll", data_dir="../data"):
     if task == "enroll":
-        data_dir = os.path.join(os.getcwd(), 'enroll.hdf5')
+        data_dir += "/enroll.hdf5"
     elif task == "test":
-        data_dir = os.path.join(os.getcwd(), 'test_fewshot.hdf5')
+        data_dir += '/test_fewshot.hdf5'
     # Chargement des données HDF5
     with h5py.File(data_dir, 'r') as data:
         x = torch.tensor(data['signaux'][:])  # Convertir les signaux en tenseur PyTorch
@@ -98,7 +104,8 @@ def load_data(task="enroll"):
 
     return x, y, snr
 
-def test_acc(model_path, n_shot=500):
+
+def test_acc(model_path, n_shot=500, data_dir="../data"):
     '''
     model_path : répertoire auquel est sauvegardé le modèle à tester
     n_shot : nombre d'échantillons à considérer pour enroller les nouvelles classes
@@ -112,7 +119,7 @@ def test_acc(model_path, n_shot=500):
     # Set the model to evaluation mode (if needed)
     model.eval()
 
-    x_enroll, y_enroll, _ = load_data(task="enroll")
+    x_enroll, y_enroll, _ = load_data(task="enroll", data_dir=data_dir)
     
     # on ne retient que les n_shot-premières données pour enroller les classes
     sampled_x_enroll, sampled_y_enroll = x_enroll[:n_shot], y_enroll[:n_shot]
@@ -125,3 +132,21 @@ def test_acc(model_path, n_shot=500):
     accuracy = compute_accuracy(model, prototypes, x_test, y_test)
 
     return accuracy
+
+def test_n_shot(model, n=5, device="cuda:0", return_logs=False, data_dir="../data"):
+    """
+    Si return_logs==True: retourne les preds et labels (dans un tuple)
+    sinon retourne l'accuracy
+    """
+    x_enroll, y_enroll, _ = load_data(task="enroll", data_dir=data_dir)
+    x_enroll, y_enroll = x_enroll.to(device), y_enroll.to(device)
+    (x_n, y_n), idxs = get_n_per_classes(x_enroll, y_enroll, n=n)
+    mask = torch.ones(x_enroll.size(0), dtype=torch.bool)
+    mask[idxs] = False
+    x_test, y_test = x_enroll[mask], y_enroll[mask]
+    model.to(device)
+    prototype = compute_prototypes(model, x_n, y_n)
+
+    out = compute_accuracy(model, prototype, x_test, y_test, logs=return_logs)
+    
+    return out

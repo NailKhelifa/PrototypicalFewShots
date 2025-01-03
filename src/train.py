@@ -2,17 +2,18 @@ import os
 import numpy as np
 import torch
 from tqdm import tqdm
-from proto_batch_sampler import PrototypicalBatchSampler
-from proto_loss import prototypical_loss as loss_fn
-from dataset import SignalNShotTrainDataset
-from proto_encoder import PrototypeEncoder
+from .proto_batch_sampler import PrototypicalBatchSampler
+from .proto_loss import prototypical_loss as loss_fn
+from .dataset import SignalNShotTrainDataset
+from .proto_encoder import PrototypeEncoder
 
 def save_list_to_file(path, thelist):
     with open(path, 'w') as f:
         for item in thelist:
             f.write("%s\n" % item)
 
-def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
+def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None,
+          last_model_path="../logs/last_model.pth"):
     """
     Train the model with the prototypical learning algorithm.
     Save the best and final models during training in the current working directory.
@@ -25,7 +26,6 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None):
     # Paths to save models in the current working directory
     cwd = os.getcwd()
     best_model_path = os.path.join(cwd, 'best_model.pth')
-    last_model_path = os.path.join(cwd, 'last_model.pth')
 
     for epoch in range(opt['epochs']):
         print('=== Epoch: {} ==='.format(epoch))

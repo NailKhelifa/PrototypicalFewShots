@@ -6,5 +6,5 @@ setup(
     packages=find_packages(),
     install_requires=["pandas", "torch", "numpy",
                       "matplotlib", "scikit-learn", "h5py",
-                      "tqdm"],
+                      "tqdm", "seaborn"],
 )

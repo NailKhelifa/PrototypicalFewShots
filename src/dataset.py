@@ -5,7 +5,8 @@ import h5py
 from torch.utils.data import Dataset
 
 class SignalNShotTrainDataset(Dataset):
-    def __init__(self, train_data_path, batch_size=100, classes_per_set=10, samples_per_class=1, matching=False):
+    def __init__(self, train_data_path, batch_size=100, classes_per_set=10, samples_per_class=1, matching=False,
+                 p_data=1):
         """
         Dataset combinant les fonctionnalités de TrainDataset et OmniglotNShotDataset.
         Args:
@@ -22,6 +23,18 @@ class SignalNShotTrainDataset(Dataset):
             x_train = x_train.permute(0, 2, 1)  # Réorganiser en [30000, 2, 2048]
             snr_train = torch.tensor(data['snr'][:])    
             y_train = torch.tensor(data['labels'][:])  # Labels
+
+        if not (0 < p_data <= 1.0):
+            raise ValueError("p_data doit être entre 0 et 1.")
+
+        if p_data != 1:
+            total_samples = x_train.size(0)
+            num_samples = int(total_samples * p_data)
+            indices = torch.randperm(total_samples)[:num_samples]
+
+            x_train = x_train[indices]
+            snr_train = snr_train[indices]
+            y_train = y_train[indices]
 
         self.x_train = x_train
         self.y_train = y_train

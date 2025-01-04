@@ -5,6 +5,7 @@ from .proto_encoder import PrototypeEncoder
 import h5py
 import os
 from .utils import get_n_per_classes
+from tqdm import tqdm
 
 
 def compute_prototypes(encoder, x_enroll, y_enroll):
@@ -153,3 +154,17 @@ def test_n_shot(model, n=5, device="cuda:0", return_logs=False, data_dir="../dat
     out = compute_accuracy(model, prototype, x_test, y_test, logs=return_logs)
 
     return out
+
+
+def eval_n_shot(model, k=10, list_n=[1, 2, 5, 10, 20, 30, 40, 50, 100], verbose=True):
+    k = 10
+    list_acc = {}
+
+    for n in tqdm(list_n) if verbose else list_n:
+        accuracies = []
+        for _ in range(k):
+            acc = test_n_shot(model, n=n, return_logs=False)
+            accuracies.append(acc)
+        list_acc[n] = accuracies
+
+    return list_acc

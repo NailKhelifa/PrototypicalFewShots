@@ -88,7 +88,7 @@ def main(opt):
     torch.cuda.manual_seed(opt['manual_seed'])
 
     # Dataset and DataLoader
-    dataset = SignalNShotTrainDataset(opt['train_dataset_path'])
+    dataset = SignalNShotTrainDataset(opt['train_dataset_path'], p_data=opt["p_data"])
     n_classes = len(np.unique(dataset.y_train))
     if n_classes < opt['classes_per_it_tr'] or n_classes < opt['classes_per_it_val']:
         raise Exception(

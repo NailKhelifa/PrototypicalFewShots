@@ -78,10 +78,15 @@ class Classifier(nn.Module):
             self.use_classification = False
 
     def forward(self, x):
+
         x = self.layer1(x)
+
         x = self.layer2(x)
+
         x = self.layer3(x)
+
         x = self.layer4(x)
+
         x = x.view(x.size(0), -1)  # Flatten
         if self.use_classification:
             x = self.fc(x)
@@ -98,13 +103,16 @@ class DistanceNetwork(nn.Module):
         """
         eps = 1e-10
         similarities = []
-        for support_signal in support_set:
-            dot_product = input_signal.unsqueeze(1).bmm(support_signal.unsqueeze(2)).squeeze()
-            support_norm = torch.norm(support_signal, dim=1, keepdim=True)
-            target_norm = torch.norm(input_signal, dim=1, keepdim=True)
-            cosine_similarity = dot_product / (support_norm * target_norm + eps)
+        support_set = support_set.permute(1,0,2)
+
+        for support_image in support_set:
+            sum_support = torch.sum(torch.pow(support_image, 2), 1)
+            support_manitude = sum_support.clamp(eps, float("inf")).rsqrt()
+            dot_product = input_signal.unsqueeze(1).bmm(support_image.unsqueeze(2)).squeeze()
+            cosine_similarity = dot_product * support_manitude
             similarities.append(cosine_similarity)
-        return torch.stack(similarities, dim=1)
+        similarities = torch.stack(similarities)
+        return similarities.t()
 
 
 class AttentionalClassify(nn.Module):
@@ -116,10 +124,16 @@ class AttentionalClassify(nn.Module):
         :return: Predicted probabilities [batch_size, num_classes]
         """
         softmax = nn.Softmax(dim=1)
-        softmax_similarities = softmax(similarities)
-        preds = torch.bmm(softmax_similarities.unsqueeze(1), support_set_y).squeeze()
-        return preds
 
+        softmax_similarities = softmax(similarities)
+        #support_set_y = support_set_y.permute(1, 0, 2)  # Nouvelle taille : (5, 9, 3)
+
+        softmax_similarities = softmax_similarities.unsqueeze(1)  # Taille : (5, 1, 9)
+
+        preds = softmax_similarities.bmm(support_set_y)  # Résultat : (5, 1, 3)
+
+        preds = preds.squeeze(1) 
+        return preds
 
 class MatchingNetwork(nn.Module):
     def __init__(self, batch_size=100, num_channels=2, fce=False, num_classes_per_set=5, 
@@ -129,7 +143,7 @@ class MatchingNetwork(nn.Module):
         Matching Network for signal data.
         """
         self.batch_size = batch_size
-        self.fce = fce
+        self.fce = False
         self.num_classes_per_set = num_classes_per_set
         self.num_samples_per_class = num_samples_per_class
 
@@ -148,11 +162,16 @@ class MatchingNetwork(nn.Module):
         """
         Forward pass for Matching Network.
         """
+        #support_set = support_set.permute(1,0,2,3)
+
         encoded_support = torch.stack([self.g(support) for support in support_set])
+
         encoded_target = self.g(target_signal)
 
         if self.fce:
             encoded_support, _, _ = self.lstm(encoded_support)
+
+        #encoded_support = encoded_support.reshape(self.num_classes_per_set, int(self.num_samples_per_class*self.batch_size), encoded_support.shape[-1])
 
         similarities = self.dn(encoded_support, encoded_target)
         preds = self.classify(similarities, support_set_y)
@@ -161,3 +180,19 @@ class MatchingNetwork(nn.Module):
         accuracy = (preds.argmax(dim=1) == target_label).float().mean()
 
         return accuracy, loss
+    
+    def predict(self, support_set, support_set_y, target_signal):
+
+        encoded_support = torch.stack([self.g(support) for support in support_set])
+
+        encoded_target = self.g(target_signal)
+
+        if self.fce:
+            encoded_support, _, _ = self.lstm(encoded_support)
+
+        #encoded_support = encoded_support.reshape(self.num_classes_per_set, int(self.num_samples_per_class*self.batch_size), encoded_support.shape[-1])
+
+        similarities = self.dn(encoded_support, encoded_target)
+        preds = self.classify(similarities, support_set_y)
+
+        return preds

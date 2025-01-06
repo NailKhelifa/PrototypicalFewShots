@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+from tqdm import trange
 import h5py
 from torch.utils.data import Dataset
 
@@ -27,14 +28,13 @@ class SignalNShotTrainDataset(Dataset):
         if not (0 < p_data <= 1.0):
             raise ValueError("p_data doit être entre 0 et 1.")
 
-        if p_data != 1:
-            total_samples = x_train.size(0)
-            num_samples = int(total_samples * p_data)
-            indices = torch.randperm(total_samples)[:num_samples]
+        total_samples = x_train.size(0)
+        num_samples = int(total_samples * p_data)
+        indices = torch.randperm(total_samples)[:num_samples]
 
-            x_train = x_train[indices]
-            snr_train = snr_train[indices]
-            y_train = y_train[indices]
+        x_train = x_train[indices]
+        snr_train = snr_train[indices]
+        y_train = y_train[indices]
 
         self.x_train = x_train
         self.y_train = y_train
@@ -67,7 +67,7 @@ class SignalNShotTrainDataset(Dataset):
         n_samples = self.samples_per_class * self.classes_per_set
         data_cache = []
 
-        for _ in range(300):
+        for _ in trange(300):
             support_set_x = torch.zeros((self.batch_size, n_samples, 2, 2048))
             support_set_y = torch.zeros((self.batch_size, n_samples))
             target_x = torch.zeros((self.batch_size, self.samples_per_class, 2, 2048))
@@ -134,32 +134,3 @@ class SignalNShotTrainDataset(Dataset):
         Retourne la taille du dataset.
         """
         return len(self.x_train)
-
-
-'''class TrainDataset(Dataset):
-
-    def __init__(self, train_data_path):
-        
-        The items are (filename,category). The index of all the categories can be found in self.idx_classes
-        Args:
-        - train_data_path: directory where the dataset is stored
-        
-        super(TrainDataset, self).__init__()
-
-        # Chargement des données HDF5
-        with h5py.File(train_data_path, 'r') as data:
-            x_train = torch.tensor(data['signaux'][:])  # Convertir les signaux en tenseur PyTorch
-            # Forme [30000, 2048, 2] que l'on réorganise en [30000, 2, 2048] : (batch, canal, résolution_temporelle)
-            x_train = x_train.permute(0, 2, 1)  
-            snr_train = torch.tensor(data['snr'][:])    
-            y_train = torch.tensor(data['labels'][:])  # Convertir les labels en tenseur PyTorch
-
-        self.x_train = x_train
-        self.y_train = y_train
-        self.snr_train = snr_train
-
-    def __getitem__(self, idx):
-        return self.x_train[idx], self.y_train[idx]
-
-    def __len__(self):
-        return len(self.x_train)'''

@@ -21,51 +21,63 @@ def plot_from_list_acc(list_acc):
     plt.show()
 
 
-def viz_tsne(model, task="enroll", data_dir="../data", max_x=500, device="cpu"):
+def viz_tsne(models, task="enroll", data_dir="../data", max_x=500, device="cpu"):
+    """
+    Visualise les embeddings t-SNE pour une liste de modèles.
+
+    :param models: Liste de modèles PyTorch.
+    :param task: Tâche associée ("train", "enroll", etc.).
+    :param data_dir: Chemin vers le dossier contenant les données.
+    :param max_x: Nombre maximum d'exemples à considérer.
+    :param device: Appareil sur lequel exécuter les modèles (par exemple, "cpu" ou "cuda:0").
+    """
     x, y, _ = load_data(task, data_dir)
-    latent_representation = model(x[:max_x].to(device))
+    num_models = len(models)
 
-    # Réduction de dimension avec t-SNE
-    tsne = TSNE(n_components=2, random_state=42)
-    latent_2d = tsne.fit_transform(latent_representation.detach().cpu().numpy())
+    # Vérification que le nombre de modèles est pair
+    assert num_models % 2 == 0, "Le nombre de modèles doit être pair."
 
-    # Création de la figure
-    plt.figure(figsize=(10, 8))
-
-    # Nuage de points avec couleurs selon les labels
-    scatter = plt.scatter(
-        latent_2d[:, 0], 
-        latent_2d[:, 1], 
-        c=y[:max_x], 
-        cmap='viridis', 
-        s=50, 
-        edgecolor='k', 
-        alpha=0.7
+    # Création d'une figure avec sous-plots
+    fig, axes = plt.subplots(
+        nrows=num_models // 2, ncols=2, figsize=(12, 6 * (num_models // 2))
     )
+    axes = axes.flatten()  # Aplatir pour un accès plus simple aux axes
 
-    # Définir un titre en fonction de la tâche
-    if task == "train":
-        title = "In-sample Representation (Training Data)"
-    elif task == "enroll":
-        title = "Out-of-sample Representation (Enrollment Data)"
-    else:
-        title = "Latent Space Representation"
+    for i, model in enumerate(models):
+        # Calcul des embeddings pour chaque modèle
+        latent_representation = model(x[:max_x].to(device))
 
-    # Ajout du titre
-    plt.title(title, fontsize=16)
+        # Réduction de dimension avec t-SNE
+        tsne = TSNE(n_components=2, random_state=42)
+        latent_2d = tsne.fit_transform(latent_representation.detach().cpu().numpy())
 
-    # Ajout des étiquettes des axes
-    plt.xlabel("t-SNE Dimension 1", fontsize=12)
-    plt.ylabel("t-SNE Dimension 2", fontsize=12)
+        # Création du nuage de points
+        scatter = axes[i].scatter(
+            latent_2d[:, 0],
+            latent_2d[:, 1],
+            c=y[:max_x],
+            cmap="viridis",
+            s=50,
+            edgecolor="k",
+            alpha=0.7,
+        )
 
-    # Ajout d'une barre de couleur (pour indiquer les classes ou labels)
-    cbar = plt.colorbar(scatter)
-    cbar.set_label("Classes", fontsize=12)
+        # Définir un titre spécifique pour chaque sous-plot
+        if task == "train":
+            title = f"Model {i+1}: In-sample (Training)"
+        elif task == "enroll":
+            title = f"Model {i+1}: Out-of-sample (Enrollment)"
+        else:
+            title = f"Model {i+1}: Latent Space"
 
-    # Ajout d'une légende pour les labels de classe, si applicable
-    plt.legend(*scatter.legend_elements(), title="Classes", loc="upper right", fontsize=10)
+        axes[i].set_title(title, fontsize=14)
+        axes[i].set_xlabel("t-SNE Dimension 1", fontsize=12)
+        axes[i].set_ylabel("t-SNE Dimension 2", fontsize=12)
 
-    # Affichage de la figure
+        # Ajouter une barre de couleur spécifique à chaque sous-plot
+        cbar = fig.colorbar(scatter, ax=axes[i])
+        cbar.set_label("Classes", fontsize=12)
+
+    # Ajuster l'espacement entre les sous-plots
     plt.tight_layout()
     plt.show()
-

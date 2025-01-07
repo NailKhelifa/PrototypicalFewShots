@@ -30,8 +30,25 @@ def euclidean_dist(x, y):
     dists = torch.pow(x - y, 2).sum(dim=2)  # (n_query * n_classes, n_classes)
     return dists.sqrt()
 
+def cosine_dist(x, y):
+    '''
+    Compute cosine distance between each pair of query and prototype.
+    x: (n_query * n_classes, feature_size)
+    y: (n_classes, feature_size)
+    '''
+    # Normalize x and y along the feature dimension to unit vectors
+    x_norm = F.normalize(x, p=2, dim=1)  # (n_query * n_classes, feature_size)
+    y_norm = F.normalize(y, p=2, dim=1)  # (n_classes, feature_size)
+    
+    # Compute cosine similarity (dot product of normalized vectors)
+    cosine_similarity = torch.matmul(x_norm, y_norm.T)  # (n_query * n_classes, n_classes)
+    
+    # Convert cosine similarity to cosine distance: distance = 1 - similarity
+    cosine_distance = 1 - cosine_similarity
+    
+    return cosine_distance
 
-def prototypical_loss(input, target, n_support):
+def prototypical_loss(input, target, n_support, dist_type="euclidean"):
     '''
     In_supportpired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
 
@@ -75,7 +92,11 @@ def prototypical_loss(input, target, n_support):
 
     query_samples = input_cpu[query_idxs]
 
-    dists = euclidean_dist(query_samples, prototypes)
+    if dist_type=="euclidean":
+        dists = euclidean_dist(query_samples, prototypes)
+    elif dist_type=="cosine":
+        dists = cosine_dist(query_samples, prototypes)
+
 
     log_p_y = F.log_softmax(-dists, dim=1).view(n_classes, n_query, -1)
 

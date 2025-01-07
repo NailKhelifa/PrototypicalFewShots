@@ -36,7 +36,7 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None,
             x, y = batch
             x, y = x.to(device), y.to(device)
             model_output = model(x)
-            loss, acc = loss_fn(model_output, target=y, n_support=opt['num_support_tr'])
+            loss, acc = loss_fn(model_output, target=y, n_support=opt['num_support_tr'], dist_type=opt["dist_type"])
             loss.backward()
             optim.step()
             train_loss.append(loss.item())
@@ -55,7 +55,7 @@ def train(opt, tr_dataloader, model, optim, lr_scheduler, val_dataloader=None,
             x, y = batch
             x, y = x.to(device), y.to(device)
             model_output = model(x)
-            loss, acc = loss_fn(model_output, target=y, n_support=opt['num_support_val'])
+            loss, acc = loss_fn(model_output, target=y, n_support=opt['num_support_val'], dist_type=opt["dist_type"])
             val_loss.append(loss.item())
             val_acc.append(acc.item())
         avg_loss = np.mean(val_loss[-opt['iterations']:])
